@@ -32,14 +32,14 @@ jmymh_download()
 	fi
 
 	COMICS_LIST=(`echo -e "$DATA" | \
-			sed -e 's#.*sFiles="\(.*\)";var sPath=.*</script>#\1#' \
+			sed -e 's#.*sFiles="\(.*\)";var sPath=.*</script>.*#\1#' \
 				-e 's=\r==g' \
 				-e q | \
 				tr '|' ' '`)
 
 	SERVER=(`echo -e "$DATA" | \
 			sed -e '/sFiles/!d' \
-				-e 's#.*sFiles=".*";var sPath="\(.*\)";</script>#\1#' \
+				-e 's#.*sFiles=".*";var sPath="\(.*\)";</script>.*#\1#' \
 				-e 's=\r==g' \
 				-e q`)
 
