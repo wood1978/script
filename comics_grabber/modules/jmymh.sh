@@ -7,10 +7,12 @@ JMYMH_BASE_SERVER3="http://mh.jmmh.net:2012"
 JMYMH_BASE_SERVER4="http://zj.jmmh.net"
 
 
+SERVER_SED="sed -e 's#[^\|]*|\([^\^]*\).*#\1#'"
+
 jmymh_download()
 {
 	local URL="$1"
-	local BASEHOST SERVER
+	local BASEHOST SERVER SERVER_PATH
 	local DATA 
 	local -a COMICS_LIST
 	local PAGES PIC_NAME
@@ -37,16 +39,29 @@ jmymh_download()
 				-e q | \
 				tr '|' ' '`)
 
+	SERVER_PATH=(`echo -e "$DATA" | \
+					sed -e '/sFiles/!d' \
+						-e 's#.*sFiles=".*";var sPath="\(.*\)";</script>.*#\1#' \
+						-e 's=\r==g' \
+						-e q`)
+
 	SERVER=(`echo -e "$DATA" | \
-			sed -e '/sFiles/!d' \
-				-e 's#.*sFiles=".*";var sPath="\(.*\)";</script>.*#\1#' \
+			sed -e '/ds/!d' \
+				-e 's#.*\(/script/ds/ds.js?r=[0-9]\+\).*#\1#' \
 				-e 's=\r==g' \
 				-e q`)
 
-	if [ $AUTO_FOLDER -eq 1 ]; then
-		PREFIX=$(echo "${SERVER}" | sed -e "s#\([^/]*/\)\{2\}\(.*\)/#\2#")
-		mkdir -p "${OUTDIR}/${PREFIX}"
-	fi
+	SERVER=$(curl \
+		-e "$BASEHOST" \
+		-s \
+		"$BASEHOST/$SERVER" | \
+		sed -e 's#[^\|]*|\([^\^]*\).*#\1#' \
+			-e 's=\r==g')
+
+	#if [ $AUTO_FOLDER -eq 1 ]; then
+	#	PREFIX=$(echo "${SERVER}" | sed -e "s#\([^/]*/\)\{2\}\(.*\)/#\2#")
+	#	mkdir -p "${OUTDIR}/${PREFIX}"
+	#fi
 
 	GET_FILE_NAME="${PREFIX}"
 	PAGES=${#COMICS_LIST[@]}
@@ -54,7 +69,7 @@ jmymh_download()
 
 	echo -ne "Total $PAGES : Downloading 0"
 	for ((idx=0;idx<${#COMICS_LIST[@]}; idx++)); do
-		URL="${JMYMH_BASE_SERVER1}/${SERVER}/${COMICS_LIST[idx]}"
+		URL="${SERVER}/${SERVER_PATH}/${COMICS_LIST[idx]}"
 		PIC_NAME=$(getPicName "$((idx+1))" "${COMICS_LIST[idx]##*.}")
 		if [ $idx -lt 10 ]; then
 			echo -ne "\b$((idx+1))"
@@ -63,6 +78,7 @@ jmymh_download()
 		else
 			echo -ne "\b\b\b$((idx+1))"
 		fi
+
 		curl -o "${OUTDIR}/${PREFIX}/${PIC_NAME}" \
 			-e "${BASEHOST}" \
 			-s \
